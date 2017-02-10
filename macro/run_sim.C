@@ -6,6 +6,14 @@ double radii2Turbo(double rMin, double rMid, double rMax, double sensW)
 
 void run_sim(Int_t nEvents = 10, TString mcEngine = "TGeant3")
 {
+  TString dir = getenv("VMCWORKDIR");
+  TString geom_dir = dir + "/Detectors/Geometry/";
+  gSystem->Setenv("GEOMPATH",geom_dir.Data());
+
+
+  TString tut_configdir = dir + "/Detectors/gconfig";
+  gSystem->Setenv("CONFIG_DIR",tut_configdir.Data());
+
   // Output file name
   char fileout[100];
   sprintf(fileout, "AliceO2_%s.mc_%i_event.root", mcEngine.Data(), nEvents);
@@ -24,6 +32,11 @@ void run_sim(Int_t nEvents = 10, TString mcEngine = "TGeant3")
   // Timer
   TStopwatch timer;
   timer.Start();
+
+  // CDB manager
+//   AliceO2::CDB::Manager *cdbManager = AliceO2::CDB::Manager::Instance();
+//   cdbManager->setDefaultStorage("local://$ALICEO2/tpc/dirty/o2cdb");
+//   cdbManager->setRun(0);
 
  // gSystem->Load("libAliceO2Base");
  // gSystem->Load("libAliceO2its");
@@ -48,8 +61,8 @@ void run_sim(Int_t nEvents = 10, TString mcEngine = "TGeant3")
 
 //  TGeoGlobalMagField::Instance()->SetField(new AliceO2::Field::MagneticField("Maps","Maps", -1., -1., AliceO2::Field::MagneticField::k5kG));
 
-  AliceO2::ITS::Detector* its = new AliceO2::ITS::Detector("ITS", kTRUE, 7);
-  run->AddModule(its);
+//  AliceO2::ITS::Detector* its = new AliceO2::ITS::Detector("ITS", kTRUE, 7);
+//  run->AddModule(its);
 
   // build ITS upgrade detector
   // sensitive area 13x15mm (X,Z) with 20x20 micron pitch, 2mm dead zone on readout side and 50
@@ -57,8 +70,8 @@ void run_sim(Int_t nEvents = 10, TString mcEngine = "TGeant3")
   const double kSensThick = 18e-4;
   const double kPitchX = 20e-4;
   const double kPitchZ = 20e-4;
-  const int kNRow = 650;
-  const int kNCol = 1500;
+  int kNRow = 650;
+  int kNCol = 1500;
   const double kSiThickIB = 150e-4;
   const double kSiThickOB = 150e-4;
   //  const double kSensThick = 120e-4;   // -> sensor Si thickness
@@ -87,7 +100,7 @@ void run_sim(Int_t nEvents = 10, TString mcEngine = "TGeant3")
   gSystem->Exec(" rm itsSegmentations.root ");
 
   // create segmentations:
-  AliceO2::ITS::UpgradeSegmentationPixel* seg0 = new AliceO2::ITS::UpgradeSegmentationPixel(
+/*  AliceO2::ITS::UpgradeSegmentationPixel* seg0 = new AliceO2::ITS::UpgradeSegmentationPixel(
     0,           // segID (0:9)
     1,           // chips per module
     kNCol,       // ncols (total for module)
@@ -144,12 +157,18 @@ void run_sim(Int_t nEvents = 10, TString mcEngine = "TGeant3")
       //	     idLr,rLr,nChipsPerStaveLr*seg0->Dz(),turbo,nStaveLr,nModPerStaveLr);
     }
   }
+*/
+  // ===| Add TPC |============================================================
+  AliceO2::TPC::Detector* tpc = new AliceO2::TPC::Detector("TPC", kTRUE);
+  tpc->SetGeoFileName("TPCGeometry.root");
+  run->AddModule(tpc);
 
   // Create PrimaryGenerator
   FairPrimaryGenerator* primGen = new FairPrimaryGenerator();
   FairBoxGenerator* boxGen = new FairBoxGenerator(2212, 1); /*protons*/
 
-  boxGen->SetThetaRange(0.0, 90.0);
+  //boxGen->SetThetaRange(0.0, 90.0);
+  boxGen->SetEtaRange(-0.9,0.9);
   boxGen->SetPRange(100, 100.01);
   boxGen->SetPhiRange(0., 360.);
   boxGen->SetDebug(kTRUE);
@@ -157,6 +176,9 @@ void run_sim(Int_t nEvents = 10, TString mcEngine = "TGeant3")
   primGen->AddGenerator(boxGen);
 
   run->SetGenerator(primGen);
+
+  // store track trajectories
+//  run->SetStoreTraj(kTRUE);
 
   // Initialize simulation run
   run->Init();
@@ -171,7 +193,7 @@ void run_sim(Int_t nEvents = 10, TString mcEngine = "TGeant3")
 
   // Start run
   run->Run(nEvents);
-  run->CreateGeometryFile("geofile_full.root");
+//  run->CreateGeometryFile("geofile_full.root");
 
   // Finish
   timer.Stop();

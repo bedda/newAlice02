@@ -1,9 +1,9 @@
 void run_digi(Int_t nEvents = 10, TString mcEngine = "TGeant3"){
         // Initialize logger
         FairLogger *logger = FairLogger::GetLogger();
-        logger->SetLogVerbosityLevel("HIGH");
-        logger->SetLogScreenLevel("DEBUG"); 
-        
+        logger->SetLogVerbosityLevel("LOW");
+        logger->SetLogScreenLevel("INFO");
+
         // Input and output file name
         std::stringstream inputfile, outputfile, paramfile;
         inputfile << "AliceO2_" << mcEngine << ".mc_" << nEvents << "_event.root";
@@ -14,8 +14,9 @@ void run_digi(Int_t nEvents = 10, TString mcEngine = "TGeant3"){
         TStopwatch timer;
 
         // Setup FairRoot analysis manager
-        FairRunAna * fRun = new FairRunAna;
-        fRun->SetInputFile(inputfile.str().c_str());
+        FairRunAna * fRun = new FairRunAna();
+        FairFileSource *fFileSource = new FairFileSource(inputfile.str().c_str());
+        fRun->SetSource(fFileSource);
         fRun->SetOutputFile(outputfile.str().c_str());
 
         // Setup Runtime DB
@@ -24,11 +25,14 @@ void run_digi(Int_t nEvents = 10, TString mcEngine = "TGeant3"){
         parInput1->open(paramfile.str().c_str());
         rtdb->setFirstInput(parInput1);
 
-        TGeoManager::Import("geofile_full.root");
+      //  TGeoManager::Import("geofile_full.root");
 
         // Setup digitizer
         AliceO2::ITS::DigitizerTask *digi = new AliceO2::ITS::DigitizerTask;
         fRun->AddTask(digi);
+
+        AliceO2::TPC::DigitizerTask *digiTPC = new AliceO2::TPC::DigitizerTask;
+        fRun->AddTask(digiTPC);
 
         fRun->Init();
 
@@ -53,12 +57,13 @@ void run_digi(Int_t nEvents = 10, TString mcEngine = "TGeant3"){
         cout << "<DartMeasurement name=\"CpuLoad\" type=\"numeric/double\">";
         cout << cpuUsage;
         cout << "</DartMeasurement>" << endl;
+        std::cout << "Macro finished succesfully." << std::endl;
 
         std::cout << endl << std::endl;
         std::cout << "Output file is "    << outputfile.str() << std::endl;
         //std::cout << "Parameter file is " << parFile << std::endl;
         std::cout << "Real time " << rtime << " s, CPU time " << ctime
                   << "s" << endl << endl;
-        std::cout << "Macro finished succesfully." << std::endl;
-}
 
+
+}
